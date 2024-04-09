@@ -1,48 +1,97 @@
-// import 'package:aitai/providers/read.dart';
-
+import 'package:aitai/providers/state.dart';
 import 'package:aitai/widgets/icons.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:uuid/uuid.dart';
+import 'package:go_router/go_router.dart';
+
+
 //メッセージ画面
 
-const importIcons = ExportIcons();
-
+//////////////////////////////////////これがメッセージクラスです！！！?/////////////////////////////////////////
 class Message {
-  final String username;
-  final String iconUrl;
-  final String text;
-  final String createdAt;
-
-  Message(this.username, this.iconUrl, this.text, this.createdAt);
+  final String imageUrl;
+  final String id;
+  final String name;
+  Message(this.imageUrl, this.id, this.name);
 
   static Message fromDocumentToMessage(DocumentSnapshot doc){
     return Message(
-      doc['username'] as String,
-      doc['iconUrl'] as String,
-      doc['text'] as String,
-      doc['createdAt'] as String,
+      doc['image'] as String,
+      doc.id, 
+      doc["name"] as String
     );
   }
 }
 
-class FireRead {
-  Future<List<Message>> read() async{
-    final db = FirebaseFirestore.instance;
-    final snapshot = await db.collection("profiles").get();
-    final ms = snapshot.docs.map((doc) => Message.fromDocumentToMessage(doc)).toList();
-    final List<String> ms2 = ms.map((e) => e.username).toList();
-    debugPrint('ちょっと中身がどうなっているのか気になったので実験中です: $ms2');
-    return ms;
-  }
+//////////////////////////////////////以下がライクしているユーザーを読み込む関数を含むクラスです！！///////////////////////////
 
+class FireRead {
+  Future<List<Message>> read(WidgetRef ref) async{
+    final db = FirebaseFirestore.instance;
+    final cu = ref.watch(currentUserProvider);
+    final sn = await db.collection("users").doc(cu).get();
+    final List<String> likeIds = List.from(sn.get("likingIds"));
+    List<Message> messages = [];
+    for(String id in likeIds){
+    final snapshot = await db.collection("users").doc(id).get();
+    if(snapshot.exists){
+      messages.add(Message.fromDocumentToMessage(snapshot));
+      //snapshot
+    }
+    }
+    //for文の処理が終わったら以下の処理が実行される
+    return messages;
+  }
 }
 
+////////////////////////////////////以下がルーム作成をする関数です！！！！/////////////////////////////////
 
+Future<String?> createRoom(List<String?> roomData) async {
+  final dbRef = FirebaseDatabase.instanceFor(
+    app: Firebase.app(), 
+    databaseURL: 'https://amkairi-e464e-default-rtdb.asia-southeast1.firebasedatabase.app/'
+  ).ref();
 
+  DataSnapshot snapshot = await dbRef.child("rooms").get();
+  final Map rooms = snapshot.value as Map;
 
+  List<dynamic>? roomIds = rooms.keys.toList();
+//nullを許容しています
+  for (var roomId in roomIds) {
+    var room = rooms[roomId];
+    if (room != null) {
+      List<Object?>? r = room["participants"] as List<Object?>?;
+      if (r != null) {
+        var sortedR = List.from(r)..sort();
+        var sortedRoomData = List.from(roomData)..sort();
 
-Widget tateScrollToWidget(Message model) {
+        bool areEqual = sortedR.toString() == sortedRoomData.toString();
+
+        if (areEqual) {
+          debugPrint("ルームはすでに存在しています");
+          String existingRoomKey = roomId.toString();
+          debugPrint(existingRoomKey);
+          return existingRoomKey;
+        }
+      }
+    }
+  }
+  var uuid = const Uuid();
+  String randomUuid = uuid.v4();
+  await dbRef.child("rooms/$randomUuid").set({
+    "participants": roomData,
+  });
+  debugPrint(randomUuid);
+  return randomUuid;
+}
+
+///////////////////////////////////以下が縦スクロールウィジェットです！！！///////////////////////////////////////
+
+Widget tateScrollToWidget(Message model, WidgetRef ref, BuildContext context) {
   final icon = Container(
     padding: const EdgeInsets.fromLTRB(10, 10, 10, 10),
     width: 80,
@@ -51,8 +100,8 @@ Widget tateScrollToWidget(Message model) {
       shape: BoxShape.circle,
     ),
     child: ClipOval(
-      child: Image.asset(
-        'assets/images/myedit_ai_image02.jpg', // TwitterアイコンのURLを指定
+      child: Image.network(
+        model.imageUrl, // TwitterアイコンのURLを指定
         fit: BoxFit.cover, // 画像がコンテナにぴったり合うように調整
       ),
     ),
@@ -62,9 +111,9 @@ Widget tateScrollToWidget(Message model) {
     padding: const EdgeInsets.fromLTRB(10, 15, 10, 0),
     height: 40,
     alignment: Alignment.centerLeft,
-    child: Text(
-      '${model.username} ${model.createdAt}',
-      style: const TextStyle(color: Colors.grey),
+    child: const Text(
+      'マッチング日 2/3',
+      style:  TextStyle(color: Colors.grey),
     ),
   );
 
@@ -73,13 +122,22 @@ Widget tateScrollToWidget(Message model) {
     height: 40,
     alignment: Alignment.centerLeft,
     child: Text(
-      model.text,
+      model.name,
       style: const TextStyle(fontWeight: FontWeight.bold),
     ),
   );
 
   return InkWell(
-    onTap: () {
+    onTap: () async {
+    final c = ref.watch(currentUserProvider);
+    debugPrint(c);
+    debugPrint(model.id);
+    try{
+    createRoom([c, model.id.toString()]).then((value) {context.push('/chat/$value');});
+ 
+    }catch(e){
+      debugPrint("エラーが発生しました$e");
+    }
 
       debugPrint('メッセージをタップしました。');
     },
@@ -106,11 +164,22 @@ Widget tateScrollToWidget(Message model) {
   );
 }
 
-class Messages extends HookWidget {
+
+/////////////////////////////////////////以下がConsumerStatefulWidgetです!!!//////////////////////////////
+
+
+class Messages extends ConsumerStatefulWidget {
   const Messages({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  MessagesState createState() => MessagesState();
+}
+
+
+class MessagesState extends ConsumerState<Messages> {
+
+   @override
+   Widget build(BuildContext context) {
     
     final titleCon = 
       Container(
@@ -147,7 +216,7 @@ class Messages extends HookWidget {
 
    final fire = FireRead();
 
-   final  messagesFuture = fire.read();
+   final  messagesFuture = fire.read(ref);
 
    final list = FutureBuilder<List<Message>>(
     future: messagesFuture,
@@ -162,10 +231,30 @@ class Messages extends HookWidget {
             itemCount: messages.length,
             itemBuilder: (context, index) {
               return Container(
-                child: tateScrollToWidget(messages[index])
+                child: tateScrollToWidget(messages[index],ref, context)
               );
             }
             );
+        } else {
+          return const Text("現在likeしているユーザーが存在しません");
+        }
+      } else {
+        return const CircularProgressIndicator();
+      }
+    }
+   );
+
+
+   final icons = FutureBuilder<List<Message>>(
+    future: messagesFuture,
+    builder: (context, snapshot){
+      if(snapshot.connectionState == ConnectionState.done){
+        if(snapshot.hasError){
+          return Text("Error: ${snapshot.error}");
+        }
+        if(snapshot.hasData){
+          final icons = snapshot.data!;
+              return ExportIcons(icons: icons);
         } else {
           return const Text("No data available");
         }
@@ -174,6 +263,7 @@ class Messages extends HookWidget {
       }
     }
    );
+   
    
     final premiumCon = Stack(
      children: <Widget>[ 
@@ -192,7 +282,7 @@ class Messages extends HookWidget {
           
           },
           style: ButtonStyle(
-            backgroundColor: MaterialStateProperty.all(Color.fromARGB(255, 238, 127, 209)),
+            backgroundColor: MaterialStateProperty.all(const Color.fromARGB(255, 238, 127, 209)),
             shape: MaterialStateProperty.all<RoundedRectangleBorder>(
               RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(5), // ボーダーラジアスを設定
@@ -219,17 +309,19 @@ class Messages extends HookWidget {
         child: SizedBox(
         child: list,
     ));
-
+  
     return Scaffold(
         backgroundColor: Colors.grey,
         body: Column(
           children: [
             titleCon,
             matchingCon,
-            importIcons, 
+            icons, 
             premiumCon,
             con
             ],
         ));
   }
 }
+
+//なんとなくコードの意味を理解しました

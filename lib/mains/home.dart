@@ -12,8 +12,8 @@ class ProfileImage {
   ProfileImage(this.imageUrl, this.userId);
   static ProfileImage fromDocumentToProfileImage(DocumentSnapshot doc){
     return ProfileImage(
-      doc['imageUrl'] as String,
-      doc["userId"] as String
+      doc['image'] as String,
+      doc.id 
     );
   }
 }
@@ -24,24 +24,25 @@ Future<void> addLiking(String? userId, String likingId) async {
   DocumentReference userDocRef = firestore.collection("users").doc(userId);
     await firestore.runTransaction((transaction) async {
       DocumentSnapshot snapshot = await transaction.get(userDocRef);
-      List<dynamic> likingIds = snapshot.get("likingIds");
+      Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
+      List<dynamic> likingIds = data.containsKey("likingIds") ? data["likingIds"] : [];
       debugPrint(likingIds.toString());
       if(!likingIds.contains(likingId)){
         likingIds.add(likingId);
         transaction.update(userDocRef, {"likingIds": likingIds});
+  
+        await firestore.collection("notifications").add({
+        "toUserId": likingId, // 通知を受けるユーザーID
+        "fromUserId": userId, // ライクしたユーザーID
+        "type": "like",
+        "fromName": data["name"],
+         // 通知の種類
+        "isRead": false, 
+        "isAccept": false,
+        "timestamp": FieldValue.serverTimestamp(), // 通知のタイムスタンプ
+      });
       }
     }); 
-  }
-
-  Future<void> array() async {
-
-     await FirebaseFirestore.instance.collection('arrays').doc("!").set({
-                    "values": [
-                    "niko",
-                    "rako",
-                    "moko"
-                    ] 
-     });
   }
 
 
@@ -66,9 +67,13 @@ class MyHome extends ConsumerStatefulWidget {
 class MyHomeState extends ConsumerState<MyHome> with TickerProviderStateMixin{
   AnimationController? _controller;
 
-  List<Map<String,String>>images = [];
+  List<Map<String,dynamic>>images = [];
   
   int currentIndex = 0;
+
+  Set<String> displayedImageUserIds = {}; 
+  bool noMoreImages = false; 
+  Future? _imageLoadFuture;
 
   @override
   void initState() {
@@ -78,6 +83,7 @@ class MyHomeState extends ConsumerState<MyHome> with TickerProviderStateMixin{
       duration: const Duration(microseconds: 5),
       vsync: this);
 
+       _imageLoadFuture = readImageUrl();
   }
 
   @override
@@ -93,18 +99,16 @@ class MyHomeState extends ConsumerState<MyHome> with TickerProviderStateMixin{
         currentIndex++;
          });
       _controller?.forward(from: 0.0);
-      }   
+      } else if(currentIndex >= images.length - 1 && !noMoreImages) {
+    setState(() {
+      noMoreImages = true; 
+    });
+  }  
 
       if(buttonType == "A"){
-
         String? currentU = ref.watch(currentUserProvider);
-
         debugPrint(currentU);
-
         try{
-
- 
-
         await addLiking(currentU, likingId);
         }catch (e) {
 
@@ -116,25 +120,25 @@ class MyHomeState extends ConsumerState<MyHome> with TickerProviderStateMixin{
   @override
   Widget build(BuildContext context){
 
-    return Scaffold(
+    if (noMoreImages) {
+    return const Center(child: Text("これ以上画像がありません"));
+   }
 
+    return Scaffold(
       body: Container(
         decoration: const BoxDecoration(
           color: Color.fromARGB(255, 227, 148, 175),
         ),
-
         child:  FutureBuilder(
-          future: readImageUrl(), 
+          future: _imageLoadFuture, 
           builder: (BuildContext contet, AsyncSnapshot snapshot){
             if(snapshot.connectionState == ConnectionState.waiting){
               return const Center(child: CircularProgressIndicator());
             } else if(snapshot.hasError) {
               return const Center(child: Text("エラーが発生しました"));
             } else {
-
-              return images.isNotEmpty ? _buildImageWidget() : Center(child: Text("画像がありません"));
-            }
-            
+              return images.isNotEmpty ? _buildImageWidget() : const Center(child: Text("画像がありません"));
+            }    
           }),
       )
     );
@@ -143,26 +147,17 @@ class MyHomeState extends ConsumerState<MyHome> with TickerProviderStateMixin{
 
    Future<void> readImageUrl() async{
     final db = FirebaseFirestore.instance;
-    final snapshot = await db.collection("images").get();
-    final im = snapshot.docs.map((doc) => ProfileImage.fromDocumentToProfileImage(doc)).toList();
-    debugPrint(im.toString());
-    images = im.map((e) => {"imageUrl":e.imageUrl,"userId": e.userId}).toList();
+    final snapshot = await db.collection("users").get();
+    final c = ref.watch(currentUserProvider);
+    final im = snapshot.docs.where((doc) => doc.id != c).map((doc) =>  {"imageUrl":doc["image"],"userId": doc.id}).toList();
     debugPrint(images.toString());
-
+    setState(() {
+      images = im;
+    });
   }
 
 
-
-  // Future<void> _readImages() async{
-  //       final db = FirebaseFirestore.instance;
-  //       final snapshot = await db.collection("profileImages").get();
-  //       final im = snapshot.docs.map((doc) => ProfileImage.fromDocumentToProfileImage(doc)).toList();
-  //       images = im.map((e) => e.image).toList();
-  //   }
-
-
   Widget _buildImageWidget() {
-    // debugPrint(images.toString());
     final stack = Stack(
       alignment: Alignment.center,
       children: [

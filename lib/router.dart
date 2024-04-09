@@ -1,7 +1,7 @@
 import 'package:aitai/signups/age.dart';
 import 'package:aitai/mains/aitai.dart';
 import 'package:aitai/subs/chat.dart';
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:aitai/signups/image.dart';
 import 'package:aitai/signups/name.dart';
 import 'package:aitai/signups/new_profile.dart';
@@ -16,10 +16,9 @@ part 'router.g.dart';
 class PagePath {
   static const signIn = '/sign-in';
   static const name = '/name';
-  static const home = '/home';
+  static const home = '/';
   static const image = '/image';
 }
-
 
 
 @riverpod 
@@ -52,23 +51,37 @@ GoRouter router(RouterRef ref){
     ),
 
      GoRoute(
-      path: '/chat',
-      builder:(_,__) => const Chat(),
-    ),
+      path: '/chat/:id',
+      builder: (BuildContext context, GoRouterState state) {
+        final String? id = state.pathParameters["id"];
+        return ChatScreen(
+          id: id,
+        );
+      }
+    )
   ];
 
-  String? redirect(BuildContext context, GoRouterState state){
-    final page = state.uri.toString();
-    final signedIn = ref.read(signedInProvider);
+  
 
-    if(signedIn && page == PagePath.signIn) {
-      return PagePath.home;
-    } else if(!signedIn){
-      return PagePath.signIn;
+  Future<String?> redirect(BuildContext context, GoRouterState state) async {
+  final page = state.uri.toString();
+  final signedIn = ref.read(signedInProvider);
+
+  final prefs = await SharedPreferences.getInstance();
+  final isFirstTime = prefs.getBool('isFirstTime') ?? true; 
+
+  if (signedIn) {
+    if (isFirstTime) {
+      await prefs.setBool('isFirstTime', false); 
+      return page == PagePath.signIn ? PagePath.name : null;
     } else {
-      return null;
+
+      return page == PagePath.signIn ? PagePath.home : null;
     }
+  } else {
+    return page != PagePath.signIn ? PagePath.signIn : null;
   }
+}
 
   final listenable = ValueNotifier<Object?>(null);
   ref.listen<Object?>(signedInProvider, (_, newState) {
@@ -78,7 +91,7 @@ GoRouter router(RouterRef ref){
   ref.onDispose(listenable.dispose);
   
   return GoRouter(
-    initialLocation: PagePath.name,
+    initialLocation: PagePath.home,
     routes: routes,
     redirect: redirect,
     refreshListenable: listenable,

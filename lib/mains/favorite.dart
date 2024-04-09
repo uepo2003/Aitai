@@ -1,13 +1,103 @@
+import 'package:aitai/providers/state.dart';
 import 'package:aitai/widgets/dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
+
+ void listenForNotifications(String? userId, BuildContext context) {
+  FirebaseFirestore.instance
+      .collection('notifications')
+      .where('toUserId', isEqualTo: userId)
+      .where('isRead', isEqualTo: false)
+      .snapshots()
+      .listen((snapshot) {
+        if (snapshot.docs.isNotEmpty) {
+          var notification = snapshot.docs.first;
+          showNotificationDialog(notification, context);
+        }
+      });
+}
+
+
+void showNotificationDialog(QueryDocumentSnapshot notification, BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text("ライクされました"),
+        content: Text("${notification['fromName']}からライクされました。"),
+        actions: <Widget>[
+          TextButton(
+            child: const Text("閉じる"),
+            onPressed: () async  {
+              await setTrue(notification.id).then((_) => Navigator.of(context).pop());
+            },
+          ),
+            TextButton(
+            child: const Text("ありがとう"),
+            onPressed: () async {
+              setAccept(notification.id, notification['toUserId'], notification['fromUserId']).then((_) => setTrue(notification.id)).then((_) => Navigator.of(context).pop()); 
+             
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+Future<void> setTrue(String id) async {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  DocumentReference docRef = firestore.collection("notifications").doc(id);
+  await docRef.update({
+    "isRead": true, // フィールド名が "isAcept" から "isAccept" に修正されていることに注意
+  });
+}
+
+
+Future<void> setAccept(String id, String userId, String likingId) async {
+  FirebaseFirestore firestore = FirebaseFirestore.instance;
+  DocumentReference docRef = firestore.collection("notifications").doc(id);
+  await docRef.update({
+    "isAccept": true, // フィールド名が "isAcept" から "isAccept" に修正されていることに注意
+  });
+  DocumentReference userDocRef = firestore.collection("users").doc(userId);
+  await firestore.runTransaction((transaction) async {
+    DocumentSnapshot snapshot = await transaction.get(userDocRef);
+    Map<String, dynamic> data = snapshot.data() as Map<String, dynamic>;
+    List<dynamic> likingIds = data.containsKey("likingIds") ? data["likingIds"] : [];
+    debugPrint(likingIds.toString());
+    if (!likingIds.contains(likingId)) {
+      likingIds.add(likingId);
+      transaction.update(userDocRef, {"likingIds": likingIds});
+    }
+  }); // この行が修正されました
+}
 
 //いいね画面
-class Favorite extends StatelessWidget {
+
+class Favorite extends ConsumerStatefulWidget {
   const Favorite({super.key});
 
   @override
+  ConsumerState<Favorite> createState() => FavoriteState();
+  }
+
+class FavoriteState extends ConsumerState<Favorite> {
+
+  @override
+  void initState() {
+    super.initState();
+    // `initState`ではlistenだけを行い、`ref.watch`は`build`で使う。これ大事！！
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final c = ref.read(currentUserProvider);
+      listenForNotifications(c,context);
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final good = Container(
+     final good = Container(
       margin: const EdgeInsets.only(bottom: 15),
       child: const Icon(
         Icons.fmd_good,
@@ -23,7 +113,7 @@ class Favorite extends StatelessWidget {
         .map<Widget>((sentence) => Text(sentence,
             softWrap: true,
             style: const TextStyle(
-              fontSize: 16,
+              fontSize: 15,
               fontWeight: FontWeight.w900,
             )))
         .expand((widget) => [widget, const SizedBox(height: 10)])

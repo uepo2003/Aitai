@@ -1,46 +1,105 @@
 //初回登録時のプロフィール入力画面
+import 'package:aitai/providers/create.dart';
 import 'package:avatar_glow/avatar_glow.dart';
 import 'package:flutter/material.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // StatefulWidgetを継承したSpeechScreenクラス
-class SpeechScreen extends StatefulWidget {
+class SpeechScreen extends ConsumerStatefulWidget {
   const SpeechScreen({super.key});
 
   @override
-  State<SpeechScreen> createState() => _SpeechScreenState();
+  ConsumerState<SpeechScreen> createState() => SpeechScreenState();
 }
 
+
 // SpeechScreenクラスの状態を管理するためのクラス
-class _SpeechScreenState extends State<SpeechScreen> {
+class SpeechScreenState extends ConsumerState<SpeechScreen> {
 
   push(BuildContext context) {
-    context.push('/home');
+    context.push('/');
   }
 
-
   SpeechToText speechToText = SpeechToText();
-
   TextEditingController textEditingController = TextEditingController();
-
   var isListening = false;
 
-  @override
+ @override
   void initState() {
     super.initState();
-    textEditingController.text = "Hold the button and start speaking or type here";
+    textEditingController.text = "あなたのプロフィールを入力してね";
   }
 
   @override
   void dispose() {
-    // コントローラーを破棄
     textEditingController.dispose();
     super.dispose();
   }
 
+  // ユーザーにエラーメッセージを表示するメソッド
+  void showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
+  //スナックバー
+
+  // SpeechToTextの初期化とエラーハンドリング
+  Future<void> initializeSpeech() async {
+    try {
+      var available = await speechToText.initialize(
+        onError: (val) => showError("音声認識エラー: $val"),
+        onStatus: (val) => debugPrint("onStatus: $val"),
+      );
+      if (!available) {
+        showError("音声認識は利用できません");
+        return;
+      }
+      startListening();
+    } catch (e) {
+      showError("音声認識の初期化中にエラーが発生しました: $e");
+    }
+  }
+
+  // 聞き取り開始
+  void startListening() {
+    setState(() {
+      isListening = true; 
+    });
+    speechToText.listen(
+      onResult: (result) {
+        setState(() {
+          textEditingController.text = result.recognizedWords;
+        });
+      },
+      localeId: 'ja_JP',
+    );
+  }
+
+  // Firestoreへのデータ保存処理とエラーハンドリング
+  Future<void> saveToFirestore() async {
+    try {
+      final n = ref.watch(createNotifierProvider.select((state) => state.name));
+      final a = ref.watch(createNotifierProvider.select((state) => state.age));
+      final i = ref.watch(createNotifierProvider.select((state) => state.image));
+      final p = ref.watch(createNotifierProvider.select((state) => state.profile));
+
+      final create = FireDB();
+      await create.create(n, a, i, p, ref).then((value) {
+        push(context);
+      });
+    } catch (e) {
+      showError("データの保存に失敗しました: $e");
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       // フローティングアクションボタンの位置を指定
       floatingActionButtonLocation: FloatingActionButtonLocation.miniCenterDocked,
@@ -49,28 +108,16 @@ class _SpeechScreenState extends State<SpeechScreen> {
         endRadius: 75.0,
         animate: isListening, // isListeningがtrueの場合、アニメーションする
         duration: const Duration(milliseconds: 2000),
-        glowColor: Color.fromARGB(31, 12, 199, 15),
+        glowColor: const Color.fromARGB(31, 12, 199, 15),
         repeatPauseDuration: const Duration(milliseconds: 100),
         showTwoGlows: true,
         child: GestureDetector(
           // タップを押し始めたときの処理
           onTapDown: (details) async {
-            if (!isListening) {
-              var available = await speechToText.initialize();
-              if (available) {
-                setState(() {
-                  isListening = true;
-                  speechToText.listen(onResult: (result) {
-                    setState(() {
-                      textEditingController.text = result.recognizedWords;
-                    });
-                  },
-                  localeId: 'ja_JP',
-                  );
-                });
-              }
-            }
-          },
+         if (!isListening) {
+           await initializeSpeech();
+           }
+         },
           // タップを離したときの処理
           onTapUp: (details) {
             setState(() {
@@ -109,121 +156,41 @@ class _SpeechScreenState extends State<SpeechScreen> {
             TextField(
               controller: textEditingController,
               maxLines: null,
+              style: const TextStyle(fontSize: 20),
               decoration: const InputDecoration(
-                hintText: "Type something or use voice input",
-                border: OutlineInputBorder(),
+                hintStyle: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w500),
+                focusedBorder: OutlineInputBorder(  
+                borderSide: BorderSide(
+                color: Color.fromARGB(255, 238, 235, 225),
+               )
+                ),
               ),
             ),
+
+            
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: () {
-
-                push(context);
-
+              final read = ref.watch(createNotifierProvider.notifier);
+              read.updateProfile(textEditingController.text);
               },
-              child: const Text('設定を完了する'),
+              child: const Text('保存する', style:  TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w500),),
             ),
+
+            ElevatedButton(
+              onPressed: () async {
+               await saveToFirestore();
+            },
+              child: const Text('さあ新たな旅に出ましょう！！', style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w500)),
+            ),
+
+            
           ],
         ),
       ),
     );
   }
 }
-
-//  final textfield = TextField(
-//       controller: _controller,
-//       decoration: const InputDecoration(
-//         hoverColor: Color.fromARGB(255, 250, 139, 139),
-//         border: OutlineInputBorder(),
-//         labelText: "プロフィールを入力してください",
-//         hintText: '',
-//         errorText: null,
-//       ),
-//     );
-
-//     final n = ref.watch(createNotifierProvider.select((state) => state.name));
-//     final a = ref.watch(createNotifierProvider.select((state) => state.age));
-//     final i = ref.watch(createNotifierProvider.select((state) => state.image));
-//     final p = ref.watch(createNotifierProvider.select((state) => state.profile));
-
-//     final button = ElevatedButton(
-//       onPressed: () async {
-//         push(context);
-//         final read = ref.read(createNotifierProvider.notifier);
-//         read.updateProfile(controller.text);
-//       },  
-//       child: const Text("次へ>")
-//       );
-
-//     final create = FireDB();
-//     create.create(n, a, i, p);
-
-
-
-//     return Scaffold(
-//      floatingActionButtonLocation:
-//           FloatingActionButtonLocation.miniCenterFloat,
-//       floatingActionButton: GestureDetector(
-//           // タップを押し始めたときの処理
-//           onTapDown: (details) async {
-//             if (!isListening) {
-//               var available = await speechToText.initialize();
-//               debugPrint(available.toString());
-//               if (available) {
-//                 setState(() {
-//                   isListening = true;
-//                   speechToText.listen(onResult: (result) {
-//                     setState(() {
-//                       debugPrint("今だ！思いの丈をぶつけろ！！");
-//                       text = result.recognizedWords;
-//                       debugPrint(text.toString());
-//                     });
-//                   });
-//                 });
-//               }
-//             }
-//           },
-//           onTapUp: (details) {
-//             setState(() {
-//               isListening = false;
-//             });
-//             speechToText.stop();
-//           },
-//           child: CircleAvatar(
-//             backgroundColor: Colors.green,
-//             radius: 35,
-//             child: Icon(
-//               isListening ? Icons.mic : Icons.mic_none,
-//               color: Colors.white,
-//             ),
-//           ),
-//         ),
-//     body: Container(
-//     decoration: const BoxDecoration(
-//       image: DecorationImage(
-//         image: AssetImage("assets/images/29117172S.jpg"), // ここに背景にしたい画像のパスを指定
-//         fit: BoxFit.cover, // 画像がコンテナ全体にフィットするように調整
-//       ),
-//     ),
-//     child: Center(
-//       child: Column(
-//         mainAxisAlignment: MainAxisAlignment.center,
-//         children: [
-//           Container(
-//             margin: const EdgeInsets.all(20),
-//             width: 300,
-//             child: textfield,
-//           ),
-//           button,
-//           const SizedBox(
-//             height: 100
-//           ),
-//           Text(text)
-//         ],
-//       ),
-//     ),
-//   ),
-//     );
 
 
 

@@ -7,8 +7,9 @@ class FabDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('レモン'),
-      content: const Text('唐揚げにかけてもいいですか？'),
+      backgroundColor: Colors.white,
+      title: const Text('いいねには課金が必要です', style: TextStyle(fontSize: 20 ,fontWeight: FontWeight.w500, color: Color.fromARGB(255, 92, 167, 227))),
+      content: const Text('AppStoreを開いてもいいですか？', style: TextStyle(fontSize: 20 ,fontWeight: FontWeight.w500, color: Color.fromARGB(255, 92, 167, 227))),
       actions: [
         // ボタン
         TextButton(
@@ -16,7 +17,7 @@ class FabDialog extends StatelessWidget {
             // ダイアログを閉じる
             Navigator.pop(context, 'A');
           },
-          child: const Text('キャンセル'),
+          child: const Text('キャンセル',style: TextStyle(fontSize: 20 ,fontWeight: FontWeight.w500, color: Color.fromARGB(255, 92, 167, 227))),
         ),
         // ボタン
         TextButton(
@@ -24,7 +25,7 @@ class FabDialog extends StatelessWidget {
             // ダイアログを閉じる
             Navigator.pop(context, 'B');
           },
-          child: const Text('OK'),
+          child: const Text('はい',style: TextStyle(fontSize: 20 ,fontWeight: FontWeight.w500, color: Color.fromARGB(255, 92, 167, 227))),
         ),
       ],
     );

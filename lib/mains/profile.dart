@@ -1,6 +1,9 @@
 //プロフィール画面
+import 'package:aitai/providers/state.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 
 final percentProvider = StateProvider((ref) {
   return 0.0;
@@ -124,11 +127,38 @@ class PromoCard extends StatelessWidget {
   }
 }
 
-class Profile extends ConsumerWidget {
+
+class Profile extends ConsumerStatefulWidget {
   const Profile({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<Profile> createState() => ProfileState();
+}
+
+class ProfileState extends ConsumerState<Profile> {
+
+ String? url = "";
+  @override
+  void initState() {
+    super.initState();
+    // `initState`ではlistenだけを行い、`ref.watch`は`build`で使う。これ大事！！
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final c = ref.read(currentUserProvider);
+      imageRead(c);
+    });
+  }
+
+  Future<void> imageRead(String? cu) async {
+  final db = FirebaseFirestore.instance;
+  final sn = await db.collection("users").doc(cu).get();
+  final im = sn.get("image");
+ setState(() {
+   url = im;
+ });
+
+}
+  @override
+  Widget build(BuildContext context) {
     final mainIcon = Container(
       padding: const EdgeInsets.only(top: 20),
       height: 150,
@@ -146,8 +176,8 @@ class Profile extends ConsumerWidget {
                 shape: BoxShape.circle,
               ),
               child: ClipOval(
-                child: Image.asset(
-                  'assets/images/myedit_ai_image02.jpg', // TwitterアイコンのURLを指定
+                child: Image.network(
+                  url.toString(), // TwitterアイコンのURLを指定
                   fit: BoxFit.cover, // 画像がコンテナにぴったり合うように調整
                 ),
               ),
@@ -159,8 +189,8 @@ class Profile extends ConsumerWidget {
               width: 34,
               height: 34,
               decoration: const BoxDecoration(
-                  shape: BoxShape.circle, color: Colors.green),
-              child: const Icon(Icons.home),
+                  shape: BoxShape.circle, color: Color.fromARGB(255, 232, 148, 203)),
+              child: const Icon(Icons.home, color: Colors.white,),
             ),
           ),
         ],
@@ -173,7 +203,7 @@ class Profile extends ConsumerWidget {
         margin: const EdgeInsets.only(left: 20),
         decoration: const BoxDecoration(
             borderRadius: BorderRadius.all(Radius.circular(10)),
-            color: Color.fromARGB(255, 168, 157, 157)),
+            color: Color.fromARGB(203, 235, 231, 231)),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -190,7 +220,7 @@ class Profile extends ConsumerWidget {
         width: 40,
         decoration: const BoxDecoration(
             borderRadius: BorderRadius.all(Radius.circular(10)),
-            color:Color.fromARGB(255, 168, 157, 157)),
+            color:Color.fromARGB(203, 235, 231, 231)),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -208,7 +238,7 @@ class Profile extends ConsumerWidget {
         margin: const EdgeInsets.only(right: 20),
         decoration: const BoxDecoration(
             borderRadius: BorderRadius.all(Radius.circular(10)),
-            color:  Color.fromARGB(255, 168, 157, 157)),
+            color:  Color.fromARGB(203, 235, 231, 231)),
         child: const Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -413,13 +443,11 @@ class Profile extends ConsumerWidget {
     final con4 = Expanded(
       child: ListView(
         children: const [
-         Anything(iconData: Icons.home, text: 'ありがとう'),
-         Anything(iconData: Icons.home, text: 'ありがとう'),
-         Anything(iconData: Icons.home, text: 'ありがとう'),
-         Anything(iconData: Icons.home, text: 'ありがとう'),
-         Anything(iconData: Icons.home, text: 'ありがとう'),
-         Anything(iconData: Icons.home, text: 'ありがとう'),
-         Anything(iconData: Icons.home, text: 'ありがとう'),
+         Anything(iconData: Icons.home, text: 'ホーム'),
+         Anything(iconData: Icons.handshake, text: 'お互い気になる!'),
+         Anything(iconData: Icons.star, text: 'お気に入り'),
+         Anything(iconData: Icons.safety_check, text: 'セーフティセンター'),
+         Anything(iconData: Icons.view_column, text: 'コラム'),
           // 必要なだけMenuウィジェットを追加できます。
         ],
       ),
@@ -443,3 +471,5 @@ class Profile extends ConsumerWidget {
     ));
   }
 }
+
+

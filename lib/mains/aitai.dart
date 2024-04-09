@@ -21,6 +21,7 @@ class Aitai extends ConsumerWidget {
 
     final appBar = index == 0 || index == 2 || index == 1 || index == 3
         ? AppBar(
+    automaticallyImplyLeading: false,
     title: Row(
     children: <Widget>[
       Column(
@@ -102,11 +103,11 @@ class Aitai extends ConsumerWidget {
       },
     );
 
-    const pages = [
-      Home(),
-      Favorite(),
-      Messages(),
-      Profile(),
+   final pages = [
+      const Home(),
+      const Favorite(),
+      const Messages(),
+      const Profile(),
     ];
 
     return Scaffold(

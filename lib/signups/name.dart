@@ -11,28 +11,40 @@ class Name extends ConsumerWidget {
     context.push('/age');
   }
 
+  
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = TextEditingController();
 
+
     final textfield = TextField(
       controller: controller,
-      decoration: const InputDecoration(
-        hoverColor: Color.fromARGB(255, 250, 139, 139),
-        border: OutlineInputBorder(),
+      decoration: InputDecoration(
+        focusedBorder: OutlineInputBorder(
+       borderRadius: BorderRadius.circular(30),
+       borderSide: const BorderSide(
+        color:  Color.fromARGB(255, 238, 235, 225),
+        )
+        ),
+        hoverColor: const Color.fromARGB(255, 250, 139, 139),
+        border: const OutlineInputBorder(),
         labelText: "あなたの名前",
-        hintText: 'カタカナで入力してください',
+        labelStyle: const TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w500),
+        hintText: '漢字で入力してください',
+        hintStyle: const TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w500),
         errorText: null,
       ),
     );
 
     final button = ElevatedButton(
+        
         onPressed: () {
-          push(context);
           final read = ref.read(createNotifierProvider.notifier);
           read.updateName(controller.text);
+           push(context);
         },
-        child: Text("次へ>"));
+        child: const Text("次へ>", style: TextStyle(color:Colors.black, fontWeight: FontWeight.w600, fontSize: 20),));
 
     return Scaffold(
       body: Container(

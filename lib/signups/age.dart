@@ -9,9 +9,11 @@ class Age extends ConsumerWidget {
   push(BuildContext context) {
     context.push('/image');
   }
+  
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+
     final controller = TextEditingController();
 
     final textfield = TextField(
@@ -20,20 +22,21 @@ class Age extends ConsumerWidget {
         hoverColor: Color.fromARGB(255, 250, 139, 139),
         border: OutlineInputBorder(),
         labelText: "あなたの年齢",
-        hintText: '',
+        labelStyle: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w500),
+        hintText: '年齢を入力してください',
+        hintStyle: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w500),
         errorText: null,
       ),
     );
 
     final button = ElevatedButton(
-      onPressed: () async {
-        push(context);
-        final read = ref.read(createNotifierProvider.notifier);
-        read.updateAge(int.parse(controller.text));
+      onPressed: ()  {
+      final read = ref.read(createNotifierProvider.notifier);
+       read.updateAge(int.parse(controller.text));
+       push(context);
       },  
-      child: const Text("次へ>")
+      child: const Text("次へ>", style: TextStyle(color:Colors.black, fontWeight: FontWeight.w600, fontSize: 20),)
       );
-
     
 return Scaffold(
   body: Container(
@@ -52,7 +55,8 @@ return Scaffold(
             width: 300,
             child: textfield,
           ),
-          button 
+          button,
+
         ],
       ),
     ),

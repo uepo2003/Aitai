@@ -1,8 +1,9 @@
+import 'package:aitai/providers/state.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:intl/intl.dart';
+
 import 'package:riverpod_annotation/riverpod_annotation.dart';
-part 'create.g.dart';
 part 'create.freezed.dart';
 
 //firebaseを使った初回登録のcreate機能
@@ -15,20 +16,14 @@ class Profile with _$Profile {
     required String profile,
   }) = _Profile;
 }
-
+ final createNotifierProvider = StateNotifierProvider<CreateNotifier, Profile>((ref) {
+      return CreateNotifier();
+});
 
 @riverpod
-class CreateNotifier extends _$CreateNotifier {
-  @override
-  Profile build() {
-    // 最初のデータ
-    return const Profile(
-      name: '',  
-      age: 0,         
-      image: '',  
-      profile: '', 
-    );
-  }
+class CreateNotifier extends StateNotifier<Profile> {
+
+CreateNotifier() : super(const Profile(name: '', age: 0, image: '', profile: ''));
 
  void updateName(String newName) {
     state = Profile(
@@ -74,12 +69,12 @@ class FireDB {
   final db = FirebaseFirestore.instance;
   Future<void> create(
     String name,int age,
-    String image, String profile
+    String image, String profile,
+    WidgetRef ref
      ) async {
-    final t = DateFormat('yyyy年M月d日H時m分');
-    final time = DateTime.now();
-    final display = t.format(time);
-    await db.collection('profiles').doc(display).set({
+
+    final display = ref.watch(currentUserProvider);
+    await db.collection('users').doc(display).set({
       'name': name,
       'age': age,
       'image': image,
