@@ -11,27 +11,28 @@ class SideMenu extends StatelessWidget {
           padding: const EdgeInsets.all(0),
           margin: const EdgeInsets.all(0),
           child: Container(
+            width: 100,
             color: Colors.blue,
             alignment: Alignment.center,
-            child: const Text('DrawerHeader'),
+            child: const Text('ドロワーヘッダー'),
           ),
         ),
         ListTile(
-          title: const Text('ListTile A'),
+          title: const Text('メッセージ'),
           onTap: () {
             debugPrint('リストタイル A をタップしました');
           },
         ),
         ListTile(
-          title: const Text('ListTile B'),
+          title: const Text('プロフィール'),
           onTap: () {
-            debugPrint('リストタイル B をタップしました');
+            debugPrint('プロフィールをタップしました');
           },
         ),
         ListTile(
-          title: const Text('ListTile C'),
+          title: const Text('設定'),
           onTap: () {
-            debugPrint('リストタイル C をタップしました');
+            debugPrint('設定をタップしました');
           },
         ),
       ]

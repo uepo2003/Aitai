@@ -35,7 +35,7 @@ GoRouter router(RouterRef ref){
     ),
     GoRoute(
           path: PagePath.home,
-          builder: (_,__) => const Aitai()
+          builder: (_,__) => Aitai()
     ),
     GoRoute(
       path: '/age',

@@ -12,8 +12,9 @@ final indexProvider = StateProvider((ref) {
 });
 
 class Aitai extends ConsumerWidget {
-  const Aitai({super.key});
-
+   Aitai({super.key});
+//Scaffolodを制御するためのグローバルキー
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final index = ref.watch(indexProvider);
@@ -32,9 +33,7 @@ class Aitai extends ConsumerWidget {
           size: 35
         ), // 画面左側に配置するアイコン
         onPressed: () {
-         const Drawer(
-           child: SideMenu(),
-           );
+          _scaffoldKey.currentState?.openDrawer();
         },
       ),
      const SizedBox(
@@ -111,7 +110,13 @@ class Aitai extends ConsumerWidget {
     ];
 
     return Scaffold(
+      key: _scaffoldKey,
       appBar: appBar,
+      drawer: SizedBox(
+        //Methods can't be invoked in constant expressions.
+        width: MediaQuery.of(context).size.width * 0.50,
+        child: const Drawer(child: SideMenu(),)
+      ),
       body: pages[index],
       bottomNavigationBar: underBar,
       
