@@ -11,7 +11,6 @@ class ExportIcons extends StatelessWidget {
       scrollDirection: Axis.horizontal, // リストビューを横方向にスクロールさせる
       itemCount: icons.length,
       itemBuilder: (context, index) {
-        // EdgeInsets margin = index == 0 ? const EdgeInsets.only(left: 25, right: 30) : const EdgeInsets.only(right: 30);
         return Column(
           children: [
             Container(

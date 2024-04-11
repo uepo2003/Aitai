@@ -37,19 +37,6 @@ class SignUp extends ConsumerWidget {
             
           },
         ),
-      // ElevatedButton( 
-      //   style: ElevatedButton.styleFrom(
-      //   padding: const EdgeInsets.all(20),
-      //   backgroundColor: Colors.blue,
-      // ),
-      // onPressed: () async {
-      // final service = AuthService();
-      // service.signIn().catchError((e) {
-      //   debugPrint('サインインできませんでした $e');
-      // });
-      // }, 
-      // child: const Text('サインイン')
-      // ),
     );
     return Scaffold(
       appBar:AppBar(

@@ -64,7 +64,7 @@ GoRouter router(RouterRef ref){
   
 
   Future<String?> redirect(BuildContext context, GoRouterState state) async {
-  final page = state.uri.toString();
+  final page = state.uri.toString(); //URLを取得しています
   final signedIn = ref.read(signedInProvider);
 
   final prefs = await SharedPreferences.getInstance();
@@ -110,7 +110,6 @@ class MyApp extends ConsumerWidget {
     return MaterialApp.router(
       debugShowCheckedModeBanner: false,
       routerConfig: router,
-
     );
   }
 }

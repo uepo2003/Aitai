@@ -13,7 +13,7 @@ void main() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-
+//firebaseの設定
    
     debugPrint('ここまではクリアしています!!2');
     const app = MyApp();

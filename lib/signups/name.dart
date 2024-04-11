@@ -11,8 +11,6 @@ class Name extends ConsumerWidget {
     context.push('/age');
   }
 
-  
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = TextEditingController();
@@ -38,7 +36,6 @@ class Name extends ConsumerWidget {
     );
 
     final button = ElevatedButton(
-        
         onPressed: () {
           final read = ref.read(createNotifierProvider.notifier);
           read.updateName(controller.text);

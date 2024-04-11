@@ -182,9 +182,7 @@ class SpeechScreenState extends ConsumerState<SpeechScreen> {
                await saveToFirestore();
             },
               child: const Text('さあ新たな旅に出ましょう！！', style: TextStyle(color: Colors.black, fontSize: 20, fontWeight: FontWeight.w500)),
-            ),
-
-            
+            ), 
           ],
         ),
       ),

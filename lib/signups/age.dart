@@ -31,6 +31,7 @@ class Age extends ConsumerWidget {
 
     final button = ElevatedButton(
       onPressed: ()  {
+    //記述する順番コードは上から下に向かって実行される
       final read = ref.read(createNotifierProvider.notifier);
        read.updateAge(int.parse(controller.text));
        push(context);
